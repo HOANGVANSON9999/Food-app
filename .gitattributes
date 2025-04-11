@@ -1,0 +1,24 @@
+# Tự động xử lý line endings
+* text=auto
+
+# Dành riêng cho code JavaScript/TypeScript/React
+*.js  text eol=lf
+*.jsx text eol=lf
+*.ts  text eol=lf
+*.tsx text eol=lf
+
+# Đảm bảo JSON giữ LF
+*.json text eol=lf
+
+# Đảm bảo Markdown/Docs chuẩn LF
+*.md   text eol=lf
+*.yml  text eol=lf
+*.yaml text eol=lf
+
+# Không áp dụng cho các file nhị phân
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.pdf  binary
