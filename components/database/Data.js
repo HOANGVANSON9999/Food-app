@@ -8,7 +8,6 @@ export const COLOURS = {
   backgroundMedium: '#B9B9B9',
   backgroundDark: '#777777',
 };
-
 export const Items = [
   {
     id: 1,
@@ -24,6 +23,8 @@ export const Items = [
     productImageList: [
       require('../database/images/foods/chicken_rice.png'),
       require('../database/images/foods/chicken_rice2.png'),
+      require('../database/images/foods/chicken_rice3.png'),
+      require('../database/images/foods/chicken_rice4.png'),
     ],
   },
   {
@@ -39,6 +40,8 @@ export const Items = [
     productImageList: [
       require('../database/images/foods/beef_noodle.png'),
       require('../database/images/foods/beef_noodle2.png'),
+      require('../database/images/foods/beef_noodle3.png'),
+      require('../database/images/foods/beef_noodle4.png'),
     ],
   },
   {
@@ -54,6 +57,8 @@ export const Items = [
     isAvailable: true,
     productImageList: [
       require('../database/images/foods/iced_milk_coffee.png'),
+      require('../database/images/foods/iced_milk_coffee1.png'),
+      require('../database/images/foods/iced_milk_coffee2.png'),
     ],
   },
   {
@@ -68,6 +73,8 @@ export const Items = [
     isAvailable: false,
     productImageList: [
       require('../database/images/foods/passion_tea.png'),
+      require('../database/images/foods/passion_tea1.png'),
+      require('../database/images/foods/passion_tea2.png'),
     ],
   },
 
@@ -83,6 +90,8 @@ export const Items = [
     isAvailable: true,
     productImageList: [
       require('../database/images/foods/peach_milk_tea.png'),
+      require('../database/images/foods/peach_milk_tea1.png'),
+      require('../database/images/foods/peach_milk_tea2.png'),
     ],
   },
   {
@@ -97,6 +106,8 @@ export const Items = [
     isAvailable: true,
     productImageList: [
       require('../database/images/foods/matcha_latte.png'),
+      require('../database/images/foods/matcha_latte1.png'),
+      require('../database/images/foods/matcha_latte2.png')
     ],
   },
   
