@@ -1,82 +1,91 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-} from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+// screens/LoginScreen.js
+import React, { useState } from 'react';
+import { View, TextInput, TouchableOpacity, Text, Alert, StyleSheet } from 'react-native';
+import Feather from 'react-native-vector-icons/Feather';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
 
-const generateCaptcha = () => {
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-  let captcha = '';
-  for (let i = 0; i < 5; i++) {
-    captcha += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return captcha;
-};
+import { getAllUsers, saveLoggedInUser } from '../../components/database/dbLocal';
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [captchaInput, setCaptchaInput] = useState('');
-  const [captchaCode, setCaptchaCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  useEffect(() => {
-    setCaptchaCode(generateCaptcha());
-  }, []);
+  const handleLogin = async () => {
+    if (!email || !password) {
+      return Alert.alert('❗️ Please enter both email and password');
+    }
 
-  const refreshCaptcha = () => {
-    setCaptchaCode(generateCaptcha());
-    setCaptchaInput('');
+    // 1. Load users từ AsyncStorage
+    const users = await getAllUsers();
+
+    // 2. Tìm user
+    const user = users.find(
+      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
+    );
+
+    if (user) {
+      await saveLoggedInUser(user);
+
+      // Hiển thị thông báo thành công
+      Alert.alert(
+        'Login Successful',
+        'Welcome back!',
+        [
+          { text: 'OK', onPress: () => navigation.replace('Home') }
+        ],
+        { cancelable: false }
+      );
+    } else {
+      Alert.alert('❌ Email or password is incorrect');
+    }
   };
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
 
-      <TextInput
-        style={styles.input}
-        placeholder="Email"
-        placeholderTextColor="#aaa"
-        keyboardType="email-address"
-        autoCapitalize="none"
-        value={email}
-        onChangeText={setEmail}
-      />
-
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#aaa"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-      />
-
-      <View style={styles.captchaRow}>
+      {/* Email/User */}
+      <View style={styles.inputContainer}>
+        <MaterialIcons name="email" size={20} color="#aaa" style={styles.iconLeft} />
         <TextInput
-          style={styles.captchaInput}
-          placeholder="Code"
+          style={styles.inputField}
+          placeholder="Email"
           placeholderTextColor="#aaa"
-          value={captchaInput}
-          onChangeText={setCaptchaInput}
+          keyboardType="email-address"
+          autoCapitalize="none"
+          value={email}
+          onChangeText={setEmail}
         />
-
-        <View style={styles.captchaBox}>
-          <Text style={styles.captchaText}>{captchaCode}</Text>
-          <TouchableOpacity onPress={refreshCaptcha}>
-            <MaterialIcons name="refresh" size={20} color="#fff" />
-          </TouchableOpacity>
-        </View>
       </View>
 
-      <TouchableOpacity style={styles.button} onPress={()=>navigation.navigate('Home')}>
+      {/* Password */}
+      <View style={styles.inputContainer}>
+        <Feather name="lock" size={20} color="#aaa" style={styles.iconLeft} />
+        <TextInput
+          style={styles.inputField}
+          placeholder="Password"
+          placeholderTextColor="#aaa"
+          secureTextEntry={!showPassword}
+          value={password}
+          onChangeText={setPassword}
+        />
+        <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+          <Feather
+            name={showPassword ? 'eye' : 'eye-off'}
+            size={20}
+            color="#aaa"
+          />
+        </TouchableOpacity>
+      </View>
+
+      {/* Sign In */}
+      <TouchableOpacity style={styles.button} onPress={handleLogin}>
         <Text style={styles.buttonText}>Sign in</Text>
       </TouchableOpacity>
 
-      <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+      {/* Go to Register */}
+      <TouchableOpacity onPress={() => navigation.replace('Register')}>
         <Text style={styles.linkText}>Don't have an account? Sign up</Text>
       </TouchableOpacity>
     </View>
@@ -97,49 +106,25 @@ const styles = StyleSheet.create({
     color: '#ff6347',
     marginBottom: 30,
   },
-  input: {
+  inputContainer: {
     width: '100%',
     backgroundColor: '#fff',
     borderColor: '#ddd',
     borderWidth: 1,
     borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
-    fontSize: 16,
-  },
-  captchaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
+    paddingHorizontal: 10,
     marginBottom: 16,
   },
-  captchaInput: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderColor: '#ddd',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
+  iconLeft: {
     marginRight: 10,
   },
-  captchaBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ff6347',
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-  },
-  captchaText: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 2,
-    marginRight: 8,
+  inputField: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 12,
+    color: '#000',
   },
   button: {
     backgroundColor: '#ff6347',
@@ -147,6 +132,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 40,
     borderRadius: 10,
     width: '100%',
+    marginTop: 10,
   },
   buttonText: {
     color: '#fff',

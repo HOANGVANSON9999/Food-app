@@ -12,8 +12,8 @@ export const Items = [
   {
     id: 1,
     category: 'product',
-    productName: 'Grilled Chicken Rice',
-    productPrice: 75000,
+    productName: 'Cơm Gà Nướng Sốt ',
+    productPrice: 75,
     description:
       'Cơm gà nướng thơm lừng ăn kèm nước mắm chua ngọt và rau sống. Phù hợp cho bữa trưa hoặc tối.',
     isOff: true,
@@ -30,8 +30,8 @@ export const Items = [
   {
     id: 2,
     category: 'product',
-    productName: 'Beef Noodle Soup',
-    productPrice: 60000,
+    productName: 'Phở Bò Truyền Thống',
+    productPrice: 60,
     description:
       'Phở bò với nước dùng đậm đà, thịt bò mềm, bánh phở dai, kèm rau thơm.',
     isOff: false,
@@ -47,8 +47,8 @@ export const Items = [
   {
     id: 3,
     category: 'drink',
-    productName: 'Iced Milk Coffee',
-    productPrice: 25000,
+    productName: 'Cà Phê Sữa',
+    productPrice: 25,
     description:
       'Cà phê sữa đá truyền thống Việt Nam, đậm đà và tỉnh táo cả ngày.',
     isOff: true,
@@ -64,13 +64,13 @@ export const Items = [
   {
     id: 4,
     category: 'drink',
-    productName: 'Passion Fruit Tea',
-    productPrice: 30000,
+    productName: 'Trà Chanh Dây',
+    productPrice: 30,
     description:
       'Trà chanh dây thơm mát, kèm topping thạch trái cây.',
-    isOff: false,
+    isOff: true,
     productImage: require('../database/images/foods/passion_tea.png'),
-    isAvailable: false,
+    isAvailable: true,
     productImageList: [
       require('../database/images/foods/passion_tea.png'),
       require('../database/images/foods/passion_tea1.png'),
@@ -81,8 +81,8 @@ export const Items = [
   {
     id: 5,
     category: 'drink',
-    productName: 'Peach Milk Tea',
-    productPrice: 32000,
+    productName: 'Trà Sữa Vị Đào',
+    productPrice: 32,
     description:
       'Trà sữa vị đào thơm ngọt, kèm trân châu đen dẻo ngon.',
     isOff: false,
@@ -97,8 +97,8 @@ export const Items = [
   {
     id: 6,
     category: 'drink',
-    productName: 'Matcha Latte',
-    productPrice: 35000,
+    productName: 'Trà Sữa Matcha',
+    productPrice: 35,
     description:
       'Matcha latte thơm béo, phù hợp cho người yêu trà xanh.',
     isOff: false,
@@ -110,5 +110,38 @@ export const Items = [
       require('../database/images/foods/matcha_latte2.png')
     ],
   },
-  
+  {
+    id: 7,
+    category: 'product',
+    productName: 'Cheese pizza',
+    productPrice: 35,
+    description:
+      'Cheese pizza thơm béo, phù hợp với tín đồ yêu thích đồ ăn nhanh.',
+    isOff: false,
+    productImage: require('../database/images/foods/pizza1.png'),
+    isAvailable: true,
+    productImageList: [
+      require('../database/images/foods/pizza1.png'),
+      require('../database/images/foods/pizza2.png'),
+    ],
+  },
+
+  {
+    id: 8,
+    category: 'product',
+    productName: 'Bún Bò Huế',
+    productPrice: 35,
+    description:
+      'Bún Bò Huế đặc trưng với nước dùng đậm đà từ xương bò, sả, ớt và mắm ruốc. Ăn kèm thịt bò, giò heo, chả và rau sống..',
+    isOff: false,
+    productImage: require('../database/images/foods/bunbo1.png'),
+    isAvailable: true,
+    productImageList: [
+      require('../database/images/foods/bunbo1.png'),
+      require('../database/images/foods/bunbo2.png'),
+
+    ],
+  },
+
+
 ];

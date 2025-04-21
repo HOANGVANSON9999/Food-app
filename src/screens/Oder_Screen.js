@@ -1,13 +1,102 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StatusBar, ScrollView, TouchableOpacity, FlatList, Dimensions, Image, ToastAndroid } from "react-native";
+import { View, Text, StatusBar, ScrollView, TouchableOpacity, Image, ToastAndroid } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Items, COLOURS } from "../../components/database/Data";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const MyCart_screen = ({ navigation }) => {
+
+const OderScreen = ({ navigation }) => {
     const [product, setProduct] = useState([]);
     const [total, setTotal] = useState(0);
+    const [quantities, setQuantities] = useState({});
 
+    // Thông tin giao hàng
+    const [deliveryInfo, setDeliveryInfo] = useState({
+        address: "Số 2 Đường Petre Melikishvili",
+        city: "0162, Tbilisi"
+    });
+
+    // Thông tin thanh toán
+    const [paymentInfo, setPaymentInfo] = useState({
+        type: "Visa",
+        number: "**** **** **** 1234"
+    });
+
+
+
+    // Chỉnh sửa thông tin giao hàng
+    const handleEditDelivery = () => {
+        navigation.navigate('EditDelivery', {
+            currentInfo: deliveryInfo || {  // Add fallback if deliveryInfo is undefined
+                address: "",
+                city: ""
+            },
+            onSave: (updatedInfo) => {
+                if (updatedInfo) {
+                    setDeliveryInfo(updatedInfo);
+                    AsyncStorage.setItem('deliveryInfo', JSON.stringify(updatedInfo));
+                }
+            }
+        });
+    };
+
+    // Chỉnh sửa thông tin thanh toán
+    const handleEditPayment = () => {
+        try {
+            // Chuẩn bị thông tin thanh toán hiện tại
+            const currentPaymentInfo = paymentInfo || {
+                type: "Visa",
+                number: ""
+            };
+
+            navigation.navigate('EditPayment', {
+                currentInfo: {
+                    type: currentPaymentInfo.type || "Visa",
+                    number: currentPaymentInfo.number || ""
+                },
+                onSave: (updatedInfo) => {
+                    // Kiểm tra dữ liệu trước khi lưu
+                    if (updatedInfo && updatedInfo.type && updatedInfo.number) {
+                        const newPaymentInfo = {
+                            type: updatedInfo.type,
+                            number: updatedInfo.number.replace(/\D/g, '') // Xóa ký tự không phải số
+                        };
+
+                        setPaymentInfo(newPaymentInfo);
+
+                        // Lưu vào bộ nhớ với xử lý lỗi
+                        AsyncStorage.setItem('paymentInfo', JSON.stringify(newPaymentInfo))
+                            .catch(e => console.error('Lỗi khi lưu thông tin thẻ', e));
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Lỗi khi mở màn hình thanh toán', error);
+            Alert.alert('Lỗi', 'Không thể mở màn hình chỉnh sửa');
+        }
+    };
+    const formatCurrency = (number) => {
+        return new Intl.NumberFormat("en-US", {
+            style: "currency",
+            currency: "USD",
+            maximumFractionDigits: 0,
+        }).format(number);
+    };
+
+    // Hàm kiểm tra thông tin thẻ hợp lệ
+    const validateCardInfo = (cardInfo) => {
+        if (!cardInfo) return false;
+        if (!cardInfo.type || typeof cardInfo.type !== 'string') return false;
+        if (!cardInfo.number || cardInfo.number.replace(/\D/g, '').length < 12) return false;
+        return true;
+    };
+    // Hiển thị số thẻ dạng **** **** **** 1234
+    const formatCardNumber = (number) => {
+        if (!number) return "•••• •••• •••• ••••";
+        const cleaned = number.replace(/\D/g, ''); // Loại bỏ tất cả ký tự không phải số
+        const last4 = cleaned.slice(-4); // Lấy 4 chữ số cuối
+        return `•••• •••• •••• ${last4}`; // Sử dụng template literal với ${last4}
+    };
     useEffect(() => {
         const unsubscribe = navigation.addListener("focus", () => {
             getDataFromDB();
@@ -16,17 +105,69 @@ const MyCart_screen = ({ navigation }) => {
         return unsubscribe;
     }, [navigation]);
 
+    useEffect(() => {
+        const loadSavedPayment = async () => {
+            try {
+                const savedData = await AsyncStorage.getItem('paymentInfo');
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+
+                    // Kiểm tra tính hợp lệ của dữ liệu
+                    if (parsedData && parsedData.type) {
+                        setPaymentInfo({
+                            type: parsedData.type,
+                            number: parsedData.number || ""
+                        });
+                    }
+                }
+            } catch (error) {
+                console.error('Lỗi khi tải thông tin thanh toán', error);
+            }
+        };
+
+        loadSavedPayment();
+    }, []);
+
+    const getPaymentIcon = (paymentType) => {
+        if (!paymentType) return 'credit-card-outline';
+
+        const type = paymentType.toLowerCase();
+        const iconMap = {
+            'visa': 'credit-card',
+            'mastercard': 'credit-card-multiple',
+            'amex': 'credit-card',
+            'discover': 'credit-card',
+            'jcb': 'credit-card',
+            'diners': 'credit-card',
+            'paypal': 'paypal',
+            'momo': 'cellphone',
+            'zalopay': 'wallet',
+            'vnpay': 'wallet',
+        };
+
+        return iconMap[type] || 'credit-card-outline';
+    };
+
+    // Lấy dữ liệu từ database
     const getDataFromDB = async () => {
         let items = await AsyncStorage.getItem('cartItems');
-        items = JSON.parse(items);
+        let savedQuantities = await AsyncStorage.getItem('quantities');
+
+        items = items ? JSON.parse(items) : [];
+        savedQuantities = savedQuantities ? JSON.parse(savedQuantities) : {};
+
         let productData = [];
-        if (items && items.length > 0) {
+        let quantityData = { ...savedQuantities };
+
+        if (items.length > 0) {
             Items.forEach(data => {
                 if (items.includes(data.id)) {
                     productData.push(data);
+                    if (!quantityData[data.id]) quantityData[data.id] = 1;
                 }
             });
             setProduct(productData);
+            setQuantities(quantityData);
             getTotal(productData);
         } else {
             setProduct([]);
@@ -34,38 +175,69 @@ const MyCart_screen = ({ navigation }) => {
         }
     };
 
-    const getTotal = (productData) => {
-        let total = 0;
-        if (productData && productData.length > 0) {
-            for (let index = 0; index < productData.length; index++) {
-                let productPrice = productData[index].productPrice;
-                total = total + productPrice;
-            }
+    // Cập nhật số lượng sản phẩm
+    const updateQuantity = async (id, change) => {
+        const newQuantities = { ...quantities };
+        newQuantities[id] = (newQuantities[id] || 1) + change;
+
+        if (newQuantities[id] < 1) {
+            newQuantities[id] = 1;
         }
+
+        setQuantities(newQuantities);
+        await AsyncStorage.setItem('quantities', JSON.stringify(newQuantities));
+        getTotal(product);
+    };
+
+    // Tính tổng tiền
+    const getTotal = (productData) => {
+        if (!productData || productData.length === 0) {
+            setTotal(0);
+            return;
+        }
+
+        let total = 0;
+        for (let i = 0; i < productData.length; i++) {
+            const item = productData[i];
+            const quantity = quantities[item.id] || 1;
+            total += item.productPrice * quantity;
+        }
+
         setTotal(total);
     };
 
+    // Xóa sản phẩm khỏi giỏ hàng
     const removeItemFromCart = async (id) => {
         let itemArray = await AsyncStorage.getItem('cartItems');
-        itemArray = JSON.parse(itemArray);
-        if (itemArray) {
-            let array = itemArray.filter(item => item !== id);
-            await AsyncStorage.setItem('cartItems', JSON.stringify(array));
+        let quantities = await AsyncStorage.getItem('quantities');
+
+        itemArray = itemArray ? JSON.parse(itemArray) : [];
+        quantities = quantities ? JSON.parse(quantities) : {};
+
+        if (itemArray.includes(id)) {
+            itemArray = itemArray.filter(item => item !== id);
+            delete quantities[id];
+
+            await AsyncStorage.setItem('cartItems', JSON.stringify(itemArray));
+            await AsyncStorage.setItem('quantities', JSON.stringify(quantities));
             getDataFromDB();
         }
     };
 
+    // Thanh toán
     const checkOut = async () => {
         try {
             await AsyncStorage.removeItem('cartItems');
-            ToastAndroid.show('Items will be Deliverd SOON!', ToastAndroid.SHORT);
+            await AsyncStorage.removeItem('quantities');
+            ToastAndroid.show('Sản phẩm sẽ được giao sớm!', ToastAndroid.SHORT);
             navigation.navigate('Home');
         } catch (error) {
             console.error(error);
-            ToastAndroid.show('Checkout failed!', ToastAndroid.SHORT);
+            ToastAndroid.show('Thanh toán thất bại!', ToastAndroid.SHORT);
         }
     };
 
+    // Hiển thị sản phẩm
     const renderProducts = (data, index) => {
         return (
             <TouchableOpacity
@@ -135,11 +307,11 @@ const MyCart_screen = ({ navigation }) => {
                                     marginRight: 4,
                                 }}
                             >
-                                &#8377;{data.productPrice}
+                                {formatCurrency(data.productPrice)}
                             </Text>
                             <Text>
-                                (~&#8377;
-                                {data.productPrice + data.productPrice / 20})
+
+                                (~{formatCurrency(data.productPrice * (quantities[data.id] || 1))})
                             </Text>
                         </View>
                     </View>
@@ -166,15 +338,17 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.5,
                                 }}
                             >
-                                <MaterialCommunityIcons
-                                    name="minus"
-                                    style={{
-                                        fontSize: 16,
-                                        color: COLOURS.backgroundDark,
-                                    }}
-                                />
+                                <TouchableOpacity onPress={() => updateQuantity(data.id, -1)}>
+                                    <MaterialCommunityIcons
+                                        name="minus"
+                                        style={{
+                                            fontSize: 16,
+                                            color: COLOURS.backgroundDark,
+                                        }}
+                                    />
+                                </TouchableOpacity>
                             </View>
-                            <Text>1</Text>
+                            <Text>{quantities[data.id] || 1}</Text>
                             <View
                                 style={{
                                     borderRadius: 100,
@@ -185,13 +359,15 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.5,
                                 }}
                             >
-                                <MaterialCommunityIcons
-                                    name="plus"
-                                    style={{
-                                        fontSize: 16,
-                                        color: COLOURS.backgroundDark,
-                                    }}
-                                />
+                                <TouchableOpacity onPress={() => updateQuantity(data.id, 1)}>
+                                    <MaterialCommunityIcons
+                                        name="plus"
+                                        style={{
+                                            fontSize: 16,
+                                            color: COLOURS.backgroundDark,
+                                        }}
+                                    />
+                                </TouchableOpacity>
                             </View>
                         </View>
                         <TouchableOpacity onPress={() => removeItemFromCart(data.id)}>
@@ -251,7 +427,7 @@ const MyCart_screen = ({ navigation }) => {
                             fontWeight: '400',
                         }}
                     >
-                        Order Details
+                        Chi tiết đơn hàng
                     </Text>
                     <View></View>
                 </View>
@@ -266,7 +442,7 @@ const MyCart_screen = ({ navigation }) => {
                         marginBottom: 10,
                     }}
                 >
-                    My Cart
+                    Giỏ hàng của tôi
                 </Text>
                 <View style={{ paddingHorizontal: 16 }}>
                     {product.length > 0 ? (
@@ -278,44 +454,31 @@ const MyCart_screen = ({ navigation }) => {
                             color: COLOURS.black,
                             opacity: 0.5,
                         }}>
-                            Your cart is empty
+                            Giỏ hàng của bạn đang trống
                         </Text>
                     )}
                 </View>
                 <View>
-                    <View
-                        style={{
-                            paddingHorizontal: 16,
-                            marginVertical: 10,
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: COLOURS.black,
-                                fontWeight: '500',
-                                letterSpacing: 1,
-                                marginBottom: 20,
-                            }}
-                        >
-                            Delivery Location
+                    {/* Địa chỉ giao hàng Section */}
+                    <View style={{ paddingHorizontal: 16, marginVertical: 10 }}>
+                        <Text style={{
+                            fontSize: 16,
+                            color: COLOURS.black,
+                            fontWeight: '500',
+                            letterSpacing: 1,
+                            marginBottom: 20,
+                        }}>
+                            Địa chỉ giao hàng
                         </Text>
-                        <View
-                            style={{
+
+                        <TouchableOpacity onPress={handleEditDelivery}>
+                            <View style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                            }}
-                        >
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    width: '80%',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <View
-                                    style={{
+                            }}>
+                                <View style={{ flexDirection: 'row', width: '80%', alignItems: 'center' }}>
+                                    <View style={{
                                         color: COLOURS.blue,
                                         backgroundColor: COLOURS.backgroundLight,
                                         alignItems: 'center',
@@ -323,126 +486,103 @@ const MyCart_screen = ({ navigation }) => {
                                         padding: 12,
                                         borderRadius: 10,
                                         marginRight: 18,
-                                    }}
-                                >
-                                    <MaterialCommunityIcons
-                                        name="truck-delivery-outline"
-                                        style={{
-                                            fontSize: 18,
-                                            color: COLOURS.blue,
-                                        }}
-                                    />
-                                </View>
-                                <View>
-                                    <Text
-                                        style={{
+                                    }}>
+                                        <MaterialCommunityIcons
+                                            name="truck-delivery-outline"
+                                            style={{ fontSize: 18, color: COLOURS.blue }}
+                                        />
+                                    </View>
+                                    <View>
+                                        <Text style={{
                                             fontSize: 14,
                                             color: COLOURS.black,
                                             fontWeight: '500',
-                                        }}
-                                    >
-                                        2 Petre Melikishvili St.
-                                    </Text>
-                                    <Text
-                                        style={{
+                                        }}>
+                                            {deliveryInfo?.address || "Chưa có địa chỉ"}
+                                        </Text>
+                                        <Text style={{
                                             fontSize: 12,
                                             color: COLOURS.black,
                                             fontWeight: '400',
                                             lineHeight: 20,
                                             opacity: 0.5,
-                                        }}
-                                    >
-                                        0162, Tbilisi
-                                    </Text>
+                                        }}>
+                                            {deliveryInfo?.city || "Chưa có thành phố"}
+                                        </Text>
+                                    </View>
                                 </View>
+                                <MaterialCommunityIcons
+                                    name="chevron-right"
+                                    style={{ fontSize: 22, color: COLOURS.black }}
+                                />
                             </View>
-                            <MaterialCommunityIcons
-                                name="chevron-right"
-                                style={{ fontSize: 22, color: COLOURS.black }}
-                            />
-                        </View>
+                        </TouchableOpacity>
                     </View>
-                    <View
-                        style={{
-                            paddingHorizontal: 16,
-                            marginVertical: 10,
-                        }}
-                    >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                color: COLOURS.black,
-                                fontWeight: '500',
-                                letterSpacing: 1,
-                                marginBottom: 20,
-                            }}
-                        >
-                            Payment Method
+                    {/* Phương thức thanh toán Section */}
+                    <View style={{ paddingHorizontal: 16, marginVertical: 10 }}>
+                        <Text style={{
+                            fontSize: 16,
+                            color: COLOURS.black,
+                            fontWeight: '500',
+                            letterSpacing: 1,
+                            marginBottom: 20,
+                        }}>
+                            Phương thức thanh toán
                         </Text>
-                        <View
-                            style={{
+                        <TouchableOpacity onPress={handleEditPayment}>
+                            <View style={{
                                 flexDirection: 'row',
                                 alignItems: 'center',
                                 justifyContent: 'space-between',
-                            }}
-                        >
-                            <View
-                                style={{
-                                    flexDirection: 'row',
-                                    width: '80%',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        color: COLOURS.blue,
+                            }}>
+                                <View style={{ flexDirection: 'row', width: '80%', alignItems: 'center' }}>
+                                    {/* Phần icon phương thức thanh toán */}
+                                    <View style={{
                                         backgroundColor: COLOURS.backgroundLight,
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         padding: 12,
                                         borderRadius: 10,
                                         marginRight: 18,
-                                    }}
-                                >
-                                    <Text
-                                        style={{
-                                            fontSize: 10,
-                                            fontWeight: '900',
-                                            color: COLOURS.blue,
-                                            letterSpacing: 1,
-                                        }}
-                                    >
-                                        VISA
-                                    </Text>
-                                </View>
-                                <View>
-                                    <Text
-                                        style={{
+                                    }}>
+                                        <MaterialCommunityIcons
+                                            name={getPaymentIcon(paymentInfo?.type)}
+                                            size={24}
+                                            color={COLOURS.blue}
+                                            onError={(e) => {
+                                                console.log('Icon error:', e.nativeEvent.error);
+                                                // Fallback to default icon if needed
+                                                console.log('Payment type:', paymentInfo?.type);
+                                                console.log('Resolved icon:', getPaymentIcon(paymentInfo?.type));
+                                            }}
+                                        />
+                                    </View>
+
+                                    <View>
+                                        <Text style={{
                                             fontSize: 14,
                                             color: COLOURS.black,
                                             fontWeight: '500',
-                                        }}
-                                    >
-                                        Visa Classic
-                                    </Text>
-                                    <Text
-                                        style={{
+                                        }}>
+                                            {paymentInfo?.type || "Chưa chọn phương thức"}
+                                        </Text>
+                                        <Text style={{
                                             fontSize: 12,
                                             color: COLOURS.black,
                                             fontWeight: '400',
                                             lineHeight: 20,
                                             opacity: 0.5,
-                                        }}
-                                    >
-                                        ****-9092
-                                    </Text>
+                                        }}>
+                                            {paymentInfo?.number ? `•••• •••• •••• ${paymentInfo.number.slice(-4)}` : "•••• •••• •••• ••••"}
+                                        </Text>
+                                    </View>
                                 </View>
+                                <MaterialCommunityIcons
+                                    name="chevron-right"
+                                    style={{ fontSize: 22, color: COLOURS.black }}
+                                />
                             </View>
-                            <MaterialCommunityIcons
-                                name="chevron-right"
-                                style={{ fontSize: 22, color: COLOURS.black }}
-                            />
-                        </View>
+                        </TouchableOpacity>
                     </View>
                     <View
                         style={{
@@ -460,7 +600,7 @@ const MyCart_screen = ({ navigation }) => {
                                 marginBottom: 20,
                             }}
                         >
-                            Order Info
+                            Thông tin đơn hàng
                         </Text>
                         <View
                             style={{
@@ -479,7 +619,7 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.5,
                                 }}
                             >
-                                Subtotal
+                                Tạm tính
                             </Text>
                             <Text
                                 style={{
@@ -489,7 +629,7 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.8,
                                 }}
                             >
-                                &#8377;{total}.00
+                                ${total}.00
                             </Text>
                         </View>
                         <View
@@ -509,7 +649,7 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.5,
                                 }}
                             >
-                                Shipping Tax
+                                Phí vận chuyển
                             </Text>
                             <Text
                                 style={{
@@ -519,7 +659,7 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.8,
                                 }}
                             >
-                                &#8377;{total / 20}
+                                {formatCurrency(total / 2)}
                             </Text>
                         </View>
                         <View
@@ -538,7 +678,7 @@ const MyCart_screen = ({ navigation }) => {
                                     opacity: 0.5,
                                 }}
                             >
-                                Total
+                                Tổng cộng
                             </Text>
                             <Text
                                 style={{
@@ -547,7 +687,7 @@ const MyCart_screen = ({ navigation }) => {
                                     color: COLOURS.black,
                                 }}
                             >
-                                &#8377;{total + total / 20}
+                                {formatCurrency(total + total / 2)}
                             </Text>
                         </View>
                     </View>
@@ -585,7 +725,7 @@ const MyCart_screen = ({ navigation }) => {
                                 textTransform: 'uppercase',
                             }}
                         >
-                            CHECKOUT (&#8377;{total + total / 20})
+                            THANH TOÁN ({formatCurrency(total + total / 2)})
                         </Text>
                     </TouchableOpacity>
                 </View>
@@ -594,4 +734,4 @@ const MyCart_screen = ({ navigation }) => {
     );
 };
 
-export default MyCart_screen;
+export default OderScreen;
